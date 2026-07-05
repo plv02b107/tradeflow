@@ -1,36 +1,14 @@
 # TradeFlow
 
-TradeFlow is a Python-based simulation of a post-trade operations platform used in investment banking and capital markets.
+TradeFlow is a Python-based simulation of a post-trade operations platform used in capital markets. It models the complete lifecycle of an equity trade, from trade capture through settlement, while tracking operational exceptions using reconciliation and break management.
 
-The project models the lifecycle of an equity trade after execution, including trade capture, validation, matching, settlement, reconciliation, and break management. It also includes a Streamlit dashboard for monitoring operational KPIs and trade activity.
-
-The goal of this project was to better understand how operations teams manage post-trade workflows while building a modular Python application with a relational database and reporting layer.
+The project was built to better understand how post-trade operations teams process equity trades inside investment banks and financial institutions. It combines a modular Python backend, SQLite database, and a Streamlit dashboard to simulate real operational workflows.
 
 ---
 
-## Dashboard
+## Dashboard Demo
 
-### Live Dashboard
-
-![Dashboard Demo](docs/dashboard_demo.gif)
-
-### Dashboard Screenshots
-
-#### Overview
-
-![Overview](docs/dashboard.png)
-
-#### Trade Inventory
-
-![Trades](docs/trades.png)
-
-#### Settlement Monitoring
-
-![Settlements](docs/settlements.png)
-
-#### Break Management
-
-![Breaks](docs/breaks.png)
+![TradeFlow Demo](docs/dashboard_demo.gif)
 
 ---
 
@@ -45,45 +23,45 @@ The goal of this project was to better understand how operations teams manage po
 ### Trade Capture
 
 - Capture equity trades
-- Store trade records in SQLite
-- Maintain security and counterparty master data
+- Store trade details in SQLite
+- Maintain counterparty and security master data
 
 ### Trade Validation
 
-- Validate mandatory fields
-- Reject invalid trades
-- Apply business rules before processing
+- Validate mandatory trade fields
+- Reject incomplete or invalid trades
+- Apply basic business rules before processing
 
 ### Trade Matching
 
 - Match validated trades
 - Update trade lifecycle status
 
-### Settlement
+### Settlement Engine
 
 - Simulate successful and failed settlements
 - Calculate settlement amounts
-- Record settlement status and failure reasons
+- Store settlement status and failure reasons
 
 ### Reconciliation
 
 - Compare trade and settlement records
-- Detect settlement mismatches
+- Detect settlement mismatches automatically
 
 ### Break Management
 
-- Automatically create operational breaks
-- Track unresolved exceptions
-- Monitor failed settlements
+- Create operational breaks for failed settlements
+- Track unresolved operational exceptions
 
 ### Operations Dashboard
 
-- Interactive Streamlit dashboard
+- Built with Streamlit
+- Interactive KPIs
 - Trade inventory
 - Settlement monitoring
 - Counterparty exposure
 - Daily trade volume
-- Operational KPIs
+- Break analysis
 
 ---
 
@@ -134,11 +112,7 @@ tradeflow/
 │
 ├── docs/
 │   ├── architecture.png
-│   ├── dashboard_demo.gif
-│   ├── dashboard.png
-│   ├── trades.png
-│   ├── settlements.png
-│   └── breaks.png
+│   └── dashboard_demo.gif
 │
 ├── engines/
 │   ├── capture.py
@@ -159,9 +133,9 @@ tradeflow/
 
 ## Database
 
-TradeFlow uses SQLite to store the complete trade lifecycle.
+TradeFlow uses SQLite to model a simplified post-trade processing system.
 
-Main tables include:
+The database contains the following tables:
 
 - trades
 - settlements
@@ -169,7 +143,7 @@ Main tables include:
 - securities
 - breaks
 
-Sample data is generated automatically to simulate realistic operational workflows.
+Sample data is generated automatically to simulate realistic operational activity.
 
 ---
 
@@ -207,7 +181,7 @@ Activate it.
 venv\Scripts\activate
 ```
 
-Install dependencies.
+Install the required packages.
 
 ```bash
 pip install -r requirements.txt
@@ -225,7 +199,7 @@ Generate sample data.
 python data/generate_sample_data.py
 ```
 
-Run the dashboard.
+Launch the dashboard.
 
 ```bash
 streamlit run dashboard/app.py
@@ -235,55 +209,45 @@ streamlit run dashboard/app.py
 
 ## Sample Data
 
-The project generates realistic operational data for demonstration purposes.
-
-The dataset includes:
+The sample data generator creates a realistic dataset that includes:
 
 - 500+ simulated equity trades
-- Settlement records
-- Successful and failed settlements
-- Operational breaks
 - Security master data
 - Counterparty master data
+- Successful settlements
+- Failed settlements
+- Operational breaks
 
-This allows the dashboard and reporting modules to be tested without relying on external market data.
+This allows the dashboard and reporting features to be explored without relying on external market data.
 
 ---
 
 ## What I Learned
 
-Building TradeFlow helped me understand how post-trade operations work inside financial institutions.
-
-Some of the concepts explored during the project include:
+This project gave me practical exposure to several concepts used in post-trade operations, including:
 
 - Equity trade lifecycle
 - Trade validation
 - Trade matching
 - Settlement processing
-- Reconciliation
+- Reconciliation workflows
 - Operational break management
 - Relational database design
 - Building analytical dashboards with Streamlit
-- Writing modular and maintainable Python code
+- Structuring Python applications using modular components
 
 ---
 
 ## Future Improvements
 
-Planned enhancements include:
+Some features I plan to add are:
 
-- Trade search and advanced filtering
 - CSV and Excel trade import
+- Advanced trade search and filtering
 - Break resolution workflow
-- User authentication
 - Audit logging
 - REST API
-- Docker deployment
+- User authentication
+- Docker support
 - Historical reporting
-- Role-based dashboards
 
----
-
-## License
-
-This project is intended for educational and portfolio purposes.
