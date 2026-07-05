@@ -8,7 +8,7 @@ The project was built to better understand how post-trade operations teams proce
 
 ## Dashboard Demo
 
-![TradeFlow Demo](docs/dashboard_demo.gif)
+![TradeFlow Demo](docs/tradeflow_dashboard.gif)
 
 ---
 
