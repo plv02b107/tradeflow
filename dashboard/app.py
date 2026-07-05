@@ -1,71 +1,72 @@
 from pathlib import Path
+import sqlite3
 
+import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-from utils.database import (
-    get_breaks,
-    get_settlements,
-    get_trades,
-)
-
 st.set_page_config(
     page_title="TradeFlow",
-    page_icon="📈",
+    
     layout="wide",
 )
 
-st.title("📈 TradeFlow")
-st.caption("Post-Trade Operations Dashboard")
+BASE_DIR = Path(__file__).resolve().parent.parent
+DB_PATH = BASE_DIR / "data" / "tradeflow.db"
 
-# -------------------------
-# Load Data
-# -------------------------
+connection = sqlite3.connect(DB_PATH)
 
-trades = get_trades()
-settlements = get_settlements()
-breaks = get_breaks()
+trades = pd.read_sql_query(
+    """
+    SELECT
+        t.*,
+        s.symbol,
+        c.name AS counterparty_name,
+        quantity * price AS trade_value
+    FROM trades t
+    JOIN securities s
+        ON t.security_id=s.security_id
+    JOIN counterparties c
+        ON t.counterparty_id=c.counterparty_id
+    """,
+    connection,
+)
 
-# -------------------------
-# Sidebar Filters
-# -------------------------
+settlements = pd.read_sql_query(
+    "SELECT * FROM settlements",
+    connection,
+)
+
+breaks = pd.read_sql_query(
+    "SELECT * FROM breaks",
+    connection,
+)
+
+connection.close()
+
+# ---------------- Sidebar ----------------
 
 st.sidebar.header("Filters")
 
 status_filter = st.sidebar.multiselect(
     "Trade Status",
-    sorted(trades["status"].unique()),
-    default=sorted(trades["status"].unique()),
-)
-
-security_filter = st.sidebar.multiselect(
-    "Security",
-    sorted(trades["symbol"].unique()),
-    default=sorted(trades["symbol"].unique()),
+    trades["status"].unique(),
+    default=list(trades["status"].unique()),
 )
 
 counterparty_filter = st.sidebar.multiselect(
     "Counterparty",
-    sorted(trades["counterparty_name"].unique()),
-    default=sorted(trades["counterparty_name"].unique()),
-)
-
-side_filter = st.sidebar.multiselect(
-    "Buy / Sell",
-    sorted(trades["buy_sell"].unique()),
-    default=sorted(trades["buy_sell"].unique()),
+    trades["counterparty_name"].unique(),
+    default=list(trades["counterparty_name"].unique()),
 )
 
 filtered = trades[
     (trades["status"].isin(status_filter))
-    & (trades["symbol"].isin(security_filter))
-    & (trades["counterparty_name"].isin(counterparty_filter))
-    & (trades["buy_sell"].isin(side_filter))
+    &
+    (trades["counterparty_name"].isin(counterparty_filter))
 ]
 
-# -------------------------
-# KPI Calculations
-# -------------------------
+# ---------------- KPIs ----------------
 
 total_trades = len(filtered)
 
@@ -75,156 +76,146 @@ settled = (filtered["status"] == "SETTLED").sum()
 
 failed = (filtered["status"] == "FAILED").sum()
 
-open_breaks = (breaks["status"] == "OPEN").sum()
+open_breaks = len(breaks)
 
 total_notional = filtered["trade_value"].sum()
 
-avg_trade = filtered["trade_value"].mean()
+average_trade = filtered["trade_value"].mean()
 
-settlement_success = (
+settlement_rate = (
     settled / total_trades * 100
     if total_trades
     else 0
 )
 
-failed_rate = (
+failure_rate = (
     failed / total_trades * 100
     if total_trades
     else 0
 )
 
-# -------------------------
-# KPI Row 1
-# -------------------------
+st.title(" TradeFlow")
+
+st.caption("Post-Trade Operations Dashboard")
 
 c1, c2, c3, c4, c5 = st.columns(5)
 
 c1.metric("Trades", f"{total_trades:,}")
-
 c2.metric("Matched", matched)
-
 c3.metric("Settled", settled)
-
 c4.metric("Failed", failed)
-
 c5.metric("Open Breaks", open_breaks)
 
-# -------------------------
-# KPI Row 2
-# -------------------------
+c1, c2, c3, c4 = st.columns(4)
 
-c6, c7, c8, c9 = st.columns(4)
-
-c6.metric(
+c1.metric(
     "Total Notional",
-    f"${total_notional:,.2f}",
+    f"${total_notional/1_000_000:.1f}M",
 )
 
-c7.metric(
+c2.metric(
     "Average Trade",
-    f"${avg_trade:,.2f}",
+    f"${average_trade:,.0f}",
 )
 
-c8.metric(
+c3.metric(
     "Settlement Success %",
-    f"{settlement_success:.1f}%",
+    f"{settlement_rate:.1f}%",
 )
 
-c9.metric(
+c4.metric(
     "Failure Rate",
-    f"{failed_rate:.1f}%",
+    f"{failure_rate:.1f}%",
 )
 
 st.divider()
 
-# -------------------------
-# Charts
-# -------------------------
+# ---------------- Charts ----------------
 
 left, right = st.columns(2)
 
-trade_status = (
-    filtered["status"]
-    .value_counts()
-    .reset_index()
-)
+with left:
 
-trade_status.columns = [
-    "Status",
-    "Count",
-]
+    fig = px.pie(
+        filtered,
+        names="status",
+        title="Trade Status",
+    )
 
-fig1 = px.pie(
-    trade_status,
-    names="Status",
-    values="Count",
-    title="Trade Status",
-)
+    st.plotly_chart(
+        fig,
+        width="stretch",
+    )
 
-left.plotly_chart(
-    fig1,
-    use_container_width=True,
-)
+with right:
 
-settlement_status = (
-    settlements["status"]
-    .value_counts()
-    .reset_index()
-)
+    fig = px.bar(
+        settlements.groupby("status")
+        .size()
+        .reset_index(name="Count"),
+        x="status",
+        y="Count",
+        color="status",
+        title="Settlement Status",
+    )
 
-settlement_status.columns = [
-    "Status",
-    "Count",
-]
+    st.plotly_chart(
+        fig,
+        width="stretch",
+    )
 
-fig2 = px.bar(
-    settlement_status,
-    x="Status",
-    y="Count",
-    title="Settlement Status",
-)
+left, right = st.columns(2)
 
-right.plotly_chart(
-    fig2,
-    use_container_width=True,
-)
+with left:
 
-# -------------------------
-# Row 2 Charts
-# -------------------------
+    if len(breaks):
 
-left2, right2 = st.columns(2)
+        fig = px.bar(
+            breaks.groupby("description")
+            .size()
+            .reset_index(name="Count"),
+            x="description",
+            y="Count",
+            color="description",
+            title="Break Reasons",
+        )
 
-break_status = (
-    breaks["break_type"]
-    .value_counts()
-    .reset_index()
-)
+        st.plotly_chart(
+            fig,
+            width="stretch",
+        )
 
-break_status.columns = [
-    "Break Type",
-    "Count",
-]
+with right:
 
-fig3 = px.bar(
-    break_status,
-    x="Break Type",
-    y="Count",
-    title="Break Analysis",
-)
+    exposure = (
+        filtered
+        .groupby("counterparty_name")["trade_value"]
+        .sum()
+        .sort_values(ascending=False)
+        .head(10)
+        .reset_index()
+    )
 
-left2.plotly_chart(
-    fig3,
-    use_container_width=True,
-)
+    fig = px.bar(
+        exposure,
+        x="counterparty_name",
+        y="trade_value",
+        title="Counterparty Exposure",
+    )
+
+    st.plotly_chart(
+        fig,
+        width="stretch",
+    )
 
 daily = (
-    filtered.groupby("trade_date")
+    filtered
+    .groupby("trade_date")
     .size()
     .reset_index(name="Trades")
 )
 
-fig4 = px.line(
+fig = px.line(
     daily,
     x="trade_date",
     y="Trades",
@@ -232,49 +223,7 @@ fig4 = px.line(
     title="Daily Trade Volume",
 )
 
-right2.plotly_chart(
-    fig4,
-    use_container_width=True,
-)
-
-st.divider()
-
-# -------------------------
-# Top Trades
-# -------------------------
-
-st.subheader("Largest Trades")
-
-largest = filtered.sort_values(
-    "trade_value",
-    ascending=False,
-).head(10)
-
-st.dataframe(
-    largest[
-        [
-            "trade_id",
-            "symbol",
-            "counterparty_name",
-            "buy_sell",
-            "quantity",
-            "price",
-            "trade_value",
-            "status",
-        ]
-    ],
-    use_container_width=True,
-)
-
-st.divider()
-
-# -------------------------
-# Complete Table
-# -------------------------
-
-st.subheader("Trade Inventory")
-
-st.dataframe(
-    filtered,
-    use_container_width=True,
+st.plotly_chart(
+    fig,
+    width="stretch",
 )
